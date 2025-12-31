@@ -79,7 +79,7 @@ class TelaMovimentacao(tk.Toplevel):
 
     def _registrar(self):
         if not self.combo_produto.get():
-            messagebox.showwarning("Atenção", "Selecione um produto.")
+            messagebox.showwarning("Atenção", "Selecione um produto.", parent= self)
             return
 
         try:
@@ -88,7 +88,7 @@ class TelaMovimentacao(tk.Toplevel):
                 raise ValueError
 
         except ValueError:
-            messagebox.showerror("Erro", "Quantidade inválida.")
+            messagebox.showerror("Erro", "Quantidade inválida.", parent=self)
             return
 
         indice = self.combo_produto.current()
@@ -102,12 +102,12 @@ class TelaMovimentacao(tk.Toplevel):
             else:
                 registrar_saida(produto.id, quantidade, observacao)
 
-            messagebox.showinfo("Sucesso", "Movimentação registrada!")
+            messagebox.showinfo("Sucesso", "Movimentação registrada!",parent=self)
             self._carregar_movimentacoes()
             self._limpar()
 
         except Exception as e:
-            messagebox.showerror("Erro", str(e))
+            messagebox.showerror("Erro", str(e),parent=self)
 
     def _limpar(self):
         self.combo_produto.set("")

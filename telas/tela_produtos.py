@@ -100,14 +100,14 @@ class TelaProdutos(tk.Toplevel):
             self._carregar_produtos()
             self._limpar()
 
-            messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!")
+            messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!", parent=self)
 
         except Exception as e:
-            messagebox.showerror("Erro", str(e))
+            messagebox.showerror("Erro", str(e), parent=self)
 
     def _atualizar(self):
         if not self.produto_selecionado_id:
-            messagebox.showwarning("Atenção", "Selecione um produto.")
+            messagebox.showwarning("Atenção", "Selecione um produto.", parent=self)
             return
 
         try:
@@ -128,17 +128,17 @@ class TelaProdutos(tk.Toplevel):
             self._carregar_produtos()
             self._limpar()
 
-            messagebox.showinfo("Sucesso", "Produto atualizado!")
+            messagebox.showinfo("Sucesso", "Produto atualizado!",parent=self)
 
         except Exception as e:
-            messagebox.showerror("Erro", str(e))
+            messagebox.showerror("Erro", str(e), parent=self)
 
     def _desativar(self):
         if not self.produto_selecionado_id:
-            messagebox.showwarning("Atenção", "Selecione um produto.")
+            messagebox.showwarning("Atenção", "Selecione um produto.", parent=self)
             return
 
-        if messagebox.askyesno("Confirmar", "Deseja desativar este produto?"):
+        if messagebox.askyesno("Confirmar", "Deseja desativar este produto?", parent=self):
             desativar_produto(self.produto_selecionado_id)
             self._carregar_produtos()
             self._limpar()
