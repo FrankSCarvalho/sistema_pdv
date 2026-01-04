@@ -4,26 +4,42 @@ from tkinter import messagebox
 
 from versao import VERSAO_APP
 
-URL_RELEASE = "https://api.github.com/repos/frankcarvalho/estoque_loja/releases/latest"
+URL_RELEASE = "https://api.github.com/repos/FrankSCarvalho/sistema_pdv/releases/latest"
 
 
-def verificar_atualizacao(janela):
+def comparar_versoes(v1, v2):
+    def normalizar(v):
+        partes = v.strip().split(".")
+        partes = [int(p) for p in partes]
+        while len(partes) < 3:
+            partes.append(0)
+        return partes
+
+    return normalizar(v1) > normalizar(v2)
+
+
+def verificar_atualizacao(janela=None):
     try:
         resposta = requests.get(URL_RELEASE, timeout=5)
-        resposta.raise_for_status()
+
+        if resposta.status_code != 200:
+            return
 
         dados = resposta.json()
-        versao_remota = dados["tag_name"].replace("v", "")
+        versao_remota = dados.get("tag_name", "").replace("v", "")
 
-        if versao_remota > VERSAO_APP:
+        if not versao_remota:
+            return
+
+        # 🔑 AQUI ESTAVA FALTANDO
+        if comparar_versoes(versao_remota, VERSAO_APP):
             if messagebox.askyesno(
                 "Atualização disponível",
                 f"Uma nova versão ({versao_remota}) está disponível.\n\n"
-                f"Sua versão: {VERSAO_APP}\n\n"
                 "Deseja baixar agora?",
                 parent=janela
             ):
                 webbrowser.open(dados["html_url"])
 
     except Exception:
-        pass  # silencioso para não atrapalhar o uso
+        pass  # silencioso
