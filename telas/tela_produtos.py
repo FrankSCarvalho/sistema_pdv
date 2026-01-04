@@ -90,8 +90,8 @@ class TelaProdutos(tk.Toplevel):
 
         larguras = {
             "id": 40,
-            "nome": 180,
-            "categoria": 120,
+            "nome": 200,
+            "categoria": 127,
             "tamanho": 70,
             "cor": 70,
             "estoque": 70,
@@ -116,7 +116,7 @@ class TelaProdutos(tk.Toplevel):
 
         for col in colunas:
             self.tree.heading(col, text=titulos[col])
-            self.tree.column(col, width=larguras[col], anchor=alinhamento[col])
+            self.tree.column(col, width=larguras[col], anchor=alinhamento[col], stretch=False)
 
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._selecionar_produto)
