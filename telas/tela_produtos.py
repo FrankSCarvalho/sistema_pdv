@@ -15,7 +15,7 @@ class TelaProdutos(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Cadastro de Produtos")
-        self.geometry("900x500")
+        self.geometry("1000x500")
 
         self.produto_selecionado_id = None
 
@@ -70,12 +70,53 @@ class TelaProdutos(tk.Toplevel):
         frame_lista = tk.Frame(self)
         frame_lista.pack(fill="both", expand=True, padx=10, pady=5)
 
-        colunas = ("id", "nome", "categoria", "tamanho", "cor", "estoque", "preco_venda")
+        colunas = ("id", "nome", "categoria", "tamanho", "cor", "estoque", "preco_custo", "preco_venda", "total_custo", "total_venda")
+
 
         self.tree = ttk.Treeview(frame_lista, columns=colunas, show="headings")
+
+        titulos = {
+            "id": "ID",
+            "nome": "Produto",
+            "categoria": "Categoria",
+            "tamanho": "Tam.",
+            "cor": "Cor",
+            "estoque": "Estoque",
+            "preco_custo": "Preço Custo",
+            "preco_venda": "Preço Venda",
+            "total_custo": "Total Custo",
+            "total_venda": "Total Venda"
+        }
+
+        larguras = {
+            "id": 40,
+            "nome": 180,
+            "categoria": 120,
+            "tamanho": 70,
+            "cor": 70,
+            "estoque": 70,
+            "preco_custo": 100,
+            "preco_venda": 100,
+            "total_custo": 100,
+            "total_venda": 100
+        }
+
+        alinhamento = {
+            "id": "center",
+            "nome": "w",
+            "categoria": "w",
+            "tamanho": "center",
+            "cor": "w",
+            "estoque": "center",
+            "preco_custo": "e",
+            "preco_venda": "e",
+            "total_custo": "e",
+            "total_venda": "e"
+        }
+
         for col in colunas:
-            self.tree.heading(col, text=col.capitalize())
-            self.tree.column(col, width=120)
+            self.tree.heading(col, text=titulos[col])
+            self.tree.column(col, width=larguras[col], anchor=alinhamento[col])
 
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._selecionar_produto)
@@ -162,6 +203,9 @@ class TelaProdutos(tk.Toplevel):
             self.tree.delete(item)
 
         for produto in listar_produtos():
+            total_custo = produto.estoque * (produto.preco_custo or 0)
+            total_venda = produto.estoque * (produto.preco_venda or 0)
+
             self.tree.insert("", tk.END, values=(
                 produto.id,
                 produto.nome,
@@ -169,7 +213,10 @@ class TelaProdutos(tk.Toplevel):
                 produto.tamanho,
                 produto.cor,
                 produto.estoque,
-                produto.preco_venda
+                f"R$ {produto.preco_custo:.2f}",
+                f"R$ {produto.preco_venda:.2f}",
+                f"R$ {total_custo:.2f}",
+                f"R$ {total_venda:.2f}"
             ))
 
     def _selecionar_produto(self, event):
