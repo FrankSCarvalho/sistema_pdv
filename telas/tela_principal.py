@@ -4,6 +4,8 @@ from tkinter import ttk
 from telas.tela_produtos import TelaProdutos
 from telas.tela_movimentacao import TelaMovimentacao
 
+from utils.atualizador import verificar_atualizacao
+
 
 class TelaPrincipal(tk.Tk):
     def __init__(self):
@@ -13,6 +15,8 @@ class TelaPrincipal(tk.Tk):
         self.resizable(False, False)
 
         self._criar_widgets()
+
+        self.after(1000, lambda: verificar_atualizacao(self))
 
     def _criar_widgets(self):
         frame = ttk.Frame(self, padding=20)
