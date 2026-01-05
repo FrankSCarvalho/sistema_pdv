@@ -7,7 +7,8 @@ from dao.produtos_dao import (
     atualizar_produto,
     listar_produtos,
     buscar_produto_por_id,
-    desativar_produto
+    desativar_produto,
+    reativar_produto  # ← NOVA IMPORTAÇÃO
 )
 from utils.validadores import normalizar_numero, formatar_moeda
 
@@ -16,9 +17,10 @@ class TelaProdutos(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Cadastro de Produtos")
-        self.geometry("1000x500")
+        self.geometry("1000x550")  # ← Aumentei um pouco a altura
 
         self.produto_selecionado_id = None
+        self.produto_selecionado_ativo = True  # ← NOVA VARIÁVEL para controlar se produto está ativo
 
         self._criar_widgets()
         self._carregar_produtos()
@@ -64,21 +66,55 @@ class TelaProdutos(tk.Toplevel):
 
         self.btn_salvar = tk.Button(frame_botoes, text="Salvar", command=self._salvar)
         self.btn_salvar.pack(side="left")
-        tk.Button(frame_botoes, text="Atualizar", command=self._atualizar).pack(side="left", padx=5)
+        
+        self.btn_atualizar = tk.Button(frame_botoes, text="Atualizar", command=self._atualizar)
+        self.btn_atualizar.pack(side="left", padx=5)
+        
         tk.Button(frame_botoes, text="Limpar", command=self._limpar).pack(side="left", padx=5)
-        tk.Button(frame_botoes, text="Desativar", command=self._desativar).pack(side="left", padx=5)
+        
+        # ← NOVO: Botão Desativar
+        self.btn_desativar = tk.Button(
+            frame_botoes, 
+            text="Desativar", 
+            command=self._desativar,
+            bg="#ffcccc"  # Cor de fundo levemente vermelha
+        )
+        self.btn_desativar.pack(side="left", padx=5)
+        
+        # ← NOVO: Botão Reativar
+        self.btn_reativar = tk.Button(
+            frame_botoes, 
+            text="Reativar", 
+            command=self._reativar,
+            bg="#ccffcc"  # Cor de fundo levemente verde
+        )
+        self.btn_reativar.pack(side="left", padx=5)
+
+        # ← NOVO: Checkbox para mostrar inativos
+        frame_filtro = tk.Frame(self)
+        frame_filtro.pack(fill="x", padx=10, pady=5)
+        
+        self.var_mostrar_inativos = tk.BooleanVar(value=False)
+        self.check_mostrar_inativos = tk.Checkbutton(
+            frame_filtro,
+            text="Mostrar produtos inativos",
+            variable=self.var_mostrar_inativos,
+            command=self._carregar_produtos  # Recarrega a lista quando marca/desmarca
+        )
+        self.check_mostrar_inativos.pack(side="left")
 
         # Tabela
         frame_lista = tk.Frame(self)
         frame_lista.pack(fill="both", expand=True, padx=10, pady=5)
 
-        colunas = ("id", "nome", "categoria", "tamanho", "cor", "estoque", "preco_custo", "preco_venda", "total_custo", "total_venda")
-
+        # ← NOVA COLUNA: status
+        colunas = ("id", "status", "nome", "categoria", "tamanho", "cor", "estoque", "preco_custo", "preco_venda", "total_custo", "total_venda")
 
         self.tree = ttk.Treeview(frame_lista, columns=colunas, show="headings")
 
         titulos = {
             "id": "ID",
+            "status": "Status",  # ← NOVO
             "nome": "Produto",
             "categoria": "Categoria",
             "tamanho": "Tam.",
@@ -92,10 +128,11 @@ class TelaProdutos(tk.Toplevel):
 
         larguras = {
             "id": 40,
-            "nome": 200,
-            "categoria": 127,
-            "tamanho": 70,
-            "cor": 70,
+            "status": 70,  # ← NOVO
+            "nome": 180,  # Reduzi um pouco para caber a nova coluna
+            "categoria": 110,
+            "tamanho": 60,
+            "cor": 60,
             "estoque": 70,
             "preco_custo": 100,
             "preco_venda": 100,
@@ -105,6 +142,7 @@ class TelaProdutos(tk.Toplevel):
 
         alinhamento = {
             "id": "center",
+            "status": "center",  # ← NOVO
             "nome": "w",
             "categoria": "w",
             "tamanho": "center",
@@ -122,6 +160,9 @@ class TelaProdutos(tk.Toplevel):
 
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._selecionar_produto)
+        
+        # ← NOVO: Inicialmente esconde os botões de desativar/reativar
+        self._atualizar_visibilidade_botoes()
 
     # =========================
     # AÇÕES
@@ -135,7 +176,7 @@ class TelaProdutos(tk.Toplevel):
                 tamanho=self.entry_tamanho.get(),
                 cor=self.entry_cor.get(),
                 preco_custo=normalizar_numero(self.entry_preco_custo.get()),
-                preco_venda= normalizar_numero(self.entry_preco_venda.get()),
+                preco_venda=normalizar_numero(self.entry_preco_venda.get()),
                 estoque=int(self.entry_estoque.get() or 0)
             )
 
@@ -146,7 +187,6 @@ class TelaProdutos(tk.Toplevel):
             messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!", parent=self)
 
         except ValueError as e:
-            # Captura erros de conversão de número
             messagebox.showerror("Erro", f"Valor inválido: {str(e)}", parent=self)
         except Exception as e:
             messagebox.showerror("Erro", str(e), parent=self)
@@ -165,7 +205,7 @@ class TelaProdutos(tk.Toplevel):
                 tamanho=self.entry_tamanho.get(),
                 cor=self.entry_cor.get(),
                 preco_custo=normalizar_numero(self.entry_preco_custo.get()),
-                preco_venda= normalizar_numero(self.entry_preco_venda.get()),
+                preco_venda=normalizar_numero(self.entry_preco_venda.get()),
                 estoque=int(self.entry_estoque.get() or 0),
                 ativo=1
             )
@@ -174,13 +214,12 @@ class TelaProdutos(tk.Toplevel):
             self._carregar_produtos()
             self._limpar()
 
-            messagebox.showinfo("Sucesso", "Produto atualizado!",parent=self)
+            messagebox.showinfo("Sucesso", "Produto atualizado!", parent=self)
 
         except ValueError as e:
-            # Captura erros de conversão de número
             messagebox.showerror("Erro", f"Valor inválido: {str(e)}", parent=self)
         except Exception as e:
-            messagebox.showerror("Erro do exeption", str(e), parent=self)
+            messagebox.showerror("Erro", str(e), parent=self)
 
     def _desativar(self):
         if not self.produto_selecionado_id:
@@ -191,11 +230,29 @@ class TelaProdutos(tk.Toplevel):
             desativar_produto(self.produto_selecionado_id)
             self._carregar_produtos()
             self._limpar()
+            messagebox.showinfo("Sucesso", "Produto desativado!", parent=self)
+
+    # ← NOVA FUNÇÃO: Reativar produto
+    def _reativar(self):
+        """
+        Reativa um produto que estava desativado.
+        """
+        if not self.produto_selecionado_id:
+            messagebox.showwarning("Atenção", "Selecione um produto.", parent=self)
+            return
+
+        if messagebox.askyesno("Confirmar", "Deseja reativar este produto?", parent=self):
+            reativar_produto(self.produto_selecionado_id)
+            self._carregar_produtos()
+            self._limpar()
+            messagebox.showinfo("Sucesso", "Produto reativado!", parent=self)
 
     def _limpar(self):
         self.produto_selecionado_id = None
+        self.produto_selecionado_ativo = True  # ← NOVO: Reseta o status
 
         self.btn_salvar.config(state="normal")
+        self._atualizar_visibilidade_botoes()  # ← NOVO: Atualiza botões
 
         for entry in [
             self.entry_codigo,
@@ -210,15 +267,28 @@ class TelaProdutos(tk.Toplevel):
             entry.delete(0, tk.END)
 
     def _carregar_produtos(self):
+        """
+        Carrega produtos na tabela.
+        Mostra ativos e inativos dependendo do checkbox.
+        """
+        # Limpa a tabela
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        for produto in listar_produtos():
+        # ← MODIFICADO: Agora usa o valor do checkbox
+        mostrar_inativos = self.var_mostrar_inativos.get()
+        produtos = listar_produtos(ativos_apenas=not mostrar_inativos)
+
+        for produto in produtos:
             total_custo = produto.estoque * (produto.preco_custo or 0)
             total_venda = produto.estoque * (produto.preco_venda or 0)
+            
+            # ← NOVO: Define o status visual
+            status = "ATIVO" if produto.ativo == 1 else "INATIVO"
 
             self.tree.insert("", tk.END, values=(
                 produto.id,
+                status,  # ← NOVA COLUNA
                 produto.nome,
                 produto.categoria,
                 produto.tamanho,
@@ -228,7 +298,10 @@ class TelaProdutos(tk.Toplevel):
                 formatar_moeda(produto.preco_venda),
                 formatar_moeda(total_custo),
                 formatar_moeda(total_venda)
-            ))
+            ), tags=("inativo",) if produto.ativo == 0 else ())  # ← Tag para estilizar
+
+        # ← NOVO: Estiliza produtos inativos com cor diferente
+        self.tree.tag_configure("inativo", background="#ffcccc")  # Fundo vermelho claro
 
     def _selecionar_produto(self, event):
         item = self.tree.selection()
@@ -243,8 +316,10 @@ class TelaProdutos(tk.Toplevel):
             return
 
         self.produto_selecionado_id = produto.id
+        self.produto_selecionado_ativo = (produto.ativo == 1)  # ← NOVO: Salva o status
 
         self.btn_salvar.config(state="disabled")
+        self._atualizar_visibilidade_botoes()  # ← NOVO: Atualiza botões
 
         self.entry_codigo.delete(0, tk.END)
         if produto.codigo_barras:
@@ -270,3 +345,22 @@ class TelaProdutos(tk.Toplevel):
 
         self.entry_estoque.delete(0, tk.END)
         self.entry_estoque.insert(0, produto.estoque)
+
+    # ← NOVA FUNÇÃO: Controla visibilidade dos botões
+    def _atualizar_visibilidade_botoes(self):
+        """
+        Mostra ou esconde botões Desativar/Reativar dependendo 
+        do produto selecionado estar ativo ou não.
+        """
+        if self.produto_selecionado_id is None:
+            # Nenhum produto selecionado - esconde ambos
+            self.btn_desativar.pack_forget()
+            self.btn_reativar.pack_forget()
+        elif self.produto_selecionado_ativo:
+            # Produto ATIVO - mostra apenas Desativar
+            self.btn_desativar.pack(side="left", padx=5)
+            self.btn_reativar.pack_forget()
+        else:
+            # Produto INATIVO - mostra apenas Reativar
+            self.btn_desativar.pack_forget()
+            self.btn_reativar.pack(side="left", padx=5)
