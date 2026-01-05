@@ -8,7 +8,7 @@ from dao.produtos_dao import (
     listar_produtos,
     buscar_produto_por_id,
     desativar_produto,
-    reativar_produto  # ← NOVA IMPORTAÇÃO
+    reativar_produto  
 )
 from utils.validadores import normalizar_numero, formatar_moeda
 
@@ -17,10 +17,10 @@ class TelaProdutos(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Cadastro de Produtos")
-        self.geometry("1000x550")  # ← Aumentei um pouco a altura
+        self.geometry("1000x550")  
 
         self.produto_selecionado_id = None
-        self.produto_selecionado_ativo = True  # ← NOVA VARIÁVEL para controlar se produto está ativo
+        self.produto_selecionado_ativo = True  
 
         self._criar_widgets()
         self._carregar_produtos()
@@ -127,7 +127,7 @@ class TelaProdutos(tk.Toplevel):
         }
 
         larguras = {
-            "id": 40,
+            "id": 30,
             "status": 70,  # ← NOVO
             "nome": 180,  # Reduzi um pouco para caber a nova coluna
             "categoria": 110,

@@ -10,11 +10,14 @@ URL_RELEASE = "https://api.github.com/repos/FrankSCarvalho/sistema_pdv/releases/
 def comparar_versoes(v1, v2):
     def normalizar(v):
         partes = v.strip().split(".")
+        
         partes = [int(p) for p in partes]
+        
         while len(partes) < 3:
             partes.append(0)
+        
         return partes
-
+    
     return normalizar(v1) > normalizar(v2)
 
 
@@ -31,7 +34,7 @@ def verificar_atualizacao(janela=None):
         if not versao_remota:
             return
 
-        # 🔑 AQUI ESTAVA FALTANDO
+        
         if comparar_versoes(versao_remota, VERSAO_APP):
             if messagebox.askyesno(
                 "Atualização disponível",
