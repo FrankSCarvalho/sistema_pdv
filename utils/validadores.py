@@ -39,3 +39,31 @@ def normalizar_numero(texto):
         return float(texto)
     except ValueError:
         raise ValueError(f"'{texto}' não é um número válido")
+    
+def formatar_moeda(valor):
+    """
+    Formata um número para o padrão brasileiro de moeda.
+    
+    Exemplos:
+        1234.50 -> "R$ 1.234,50"
+        10.5 -> "R$ 10,50"
+        0 -> "R$ 0,00"
+    
+    Args:
+        valor (float): O valor numérico a ser formatado
+        
+    Returns:
+        str: O valor formatado como string no padrão brasileiro
+    """
+    if valor is None:
+        valor = 0.0
+    
+    # Formata o número com 2 casas decimais e separador de milhares
+    valor_formatado = f"{valor:,.2f}"
+    
+    # Troca ponto por vírgula (decimal) e vírgula por ponto (milhares)
+    valor_formatado = valor_formatado.replace(",", "X")  # Temporário
+    valor_formatado = valor_formatado.replace(".", ",")  # Ponto vira vírgula
+    valor_formatado = valor_formatado.replace("X", ".")  # Vírgula vira ponto
+    
+    return f"R$ {valor_formatado}"

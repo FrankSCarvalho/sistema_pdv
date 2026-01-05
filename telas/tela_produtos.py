@@ -9,7 +9,7 @@ from dao.produtos_dao import (
     buscar_produto_por_id,
     desativar_produto
 )
-from utils.validadores import normalizar_numero
+from utils.validadores import normalizar_numero, formatar_moeda
 
 
 class TelaProdutos(tk.Toplevel):
@@ -220,10 +220,10 @@ class TelaProdutos(tk.Toplevel):
                 produto.tamanho,
                 produto.cor,
                 produto.estoque,
-                f"R$ {produto.preco_custo:.2f}",
-                f"R$ {produto.preco_venda:.2f}",
-                f"R$ {total_custo:.2f}",
-                f"R$ {total_venda:.2f}"
+                formatar_moeda(produto.preco_custo or 0),
+                formatar_moeda(produto.preco_venda),
+                formatar_moeda(total_custo),
+                formatar_moeda(total_venda)
             ))
 
     def _selecionar_produto(self, event):
