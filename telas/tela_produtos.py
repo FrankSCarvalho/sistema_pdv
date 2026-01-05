@@ -9,6 +9,7 @@ from dao.produtos_dao import (
     buscar_produto_por_id,
     desativar_produto
 )
+from utils.validadores import normalizar_numero
 
 
 class TelaProdutos(tk.Toplevel):
@@ -132,8 +133,8 @@ class TelaProdutos(tk.Toplevel):
                 categoria=self.entry_categoria.get(),
                 tamanho=self.entry_tamanho.get(),
                 cor=self.entry_cor.get(),
-                preco_custo=float(self.entry_preco_custo.get() or 0),
-                preco_venda=float(self.entry_preco_venda.get()),
+                preco_custo=normalizar_numero(self.entry_preco_custo.get()),
+                preco_venda= normalizar_numero(self.entry_preco_venda.get()),
                 estoque=int(self.entry_estoque.get() or 0)
             )
 
@@ -143,6 +144,9 @@ class TelaProdutos(tk.Toplevel):
 
             messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!", parent=self)
 
+        except ValueError as e:
+            # Captura erros de conversão de número
+            messagebox.showerror("Erro", f"Valor inválido: {str(e)}", parent=self)
         except Exception as e:
             messagebox.showerror("Erro", str(e), parent=self)
 
@@ -159,8 +163,8 @@ class TelaProdutos(tk.Toplevel):
                 categoria=self.entry_categoria.get(),
                 tamanho=self.entry_tamanho.get(),
                 cor=self.entry_cor.get(),
-                preco_custo=float(self.entry_preco_custo.get() or 0),
-                preco_venda=float(self.entry_preco_venda.get()),
+                preco_custo=normalizar_numero(self.entry_preco_custo.get()),
+                preco_venda= normalizar_numero(self.entry_preco_venda.get()),
                 estoque=int(self.entry_estoque.get() or 0),
                 ativo=1
             )
@@ -171,8 +175,11 @@ class TelaProdutos(tk.Toplevel):
 
             messagebox.showinfo("Sucesso", "Produto atualizado!",parent=self)
 
+        except ValueError as e:
+            # Captura erros de conversão de número
+            messagebox.showerror("Erro", f"Valor inválido: {str(e)}", parent=self)
         except Exception as e:
-            messagebox.showerror("Erro", str(e), parent=self)
+            messagebox.showerror("Erro do exeption", str(e), parent=self)
 
     def _desativar(self):
         if not self.produto_selecionado_id:
