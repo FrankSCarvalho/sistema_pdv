@@ -62,7 +62,8 @@ class TelaProdutos(tk.Toplevel):
         frame_botoes = tk.Frame(self)
         frame_botoes.pack(fill="x", padx=10, pady=5)
 
-        tk.Button(frame_botoes, text="Salvar", command=self._salvar).pack(side="left")
+        self.btn_salvar = tk.Button(frame_botoes, text="Salvar", command=self._salvar)
+        self.btn_salvar.pack(side="left")
         tk.Button(frame_botoes, text="Atualizar", command=self._atualizar).pack(side="left", padx=5)
         tk.Button(frame_botoes, text="Limpar", command=self._limpar).pack(side="left", padx=5)
         tk.Button(frame_botoes, text="Desativar", command=self._desativar).pack(side="left", padx=5)
@@ -193,6 +194,9 @@ class TelaProdutos(tk.Toplevel):
 
     def _limpar(self):
         self.produto_selecionado_id = None
+
+        self.btn_salvar.config(state="normal")
+
         for entry in [
             self.entry_codigo,
             self.entry_nome,
@@ -239,6 +243,8 @@ class TelaProdutos(tk.Toplevel):
             return
 
         self.produto_selecionado_id = produto.id
+
+        self.btn_salvar.config(state="disabled")
 
         self.entry_codigo.delete(0, tk.END)
         if produto.codigo_barras:
