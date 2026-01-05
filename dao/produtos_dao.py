@@ -138,6 +138,20 @@ def desativar_produto(produto_id):
     conexao.commit()
     conexao.close()
 
+def reativar_produto(produto_id):
+    """
+    Reativa um produto que estava desativado.
+    """
+    conexao = conectar()
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "UPDATE produtos SET ativo = 1 WHERE id = ?",
+        (produto_id,)
+    )
+
+    conexao.commit()
+    conexao.close()
 
 # =========================
 # Função auxiliar interna
