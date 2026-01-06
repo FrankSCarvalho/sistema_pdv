@@ -17,16 +17,23 @@ class TelaProdutos(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Cadastro de Produtos")
-        self.geometry("1000x600")  # Aumentei a altura para caber os controles de paginação
+        self.geometry("1000x750")  # ← AUMENTEI para 750
 
         self.produto_selecionado_id = None
         self.produto_selecionado_ativo = True
         
-        # ===== NOVO: Variáveis para controlar a paginação =====
-        self.pagina_atual = 1  # Começamos na página 1
-        self.itens_por_pagina = 16  # Quantos produtos mostrar por página
-        self.total_produtos = 0  # Quantos produtos existem no total
-        self.produtos_carregados = []  # Lista temporária com TODOS os produtos
+        # Variáveis para controlar a paginação
+        self.pagina_atual = 1
+        self.itens_por_pagina = 16
+        self.total_produtos = 0
+        self.produtos_carregados = []
+        
+        # NOVO: Variáveis para controlar a ordenação
+        self.coluna_ordenacao = "nome"  # Coluna atual de ordenação
+        self.ordem_crescente = True  # True = crescente, False = decrescente
+        
+        # NOVO: Variável para controlar o timer da busca em tempo real
+        self.timer_busca = None  # Usado para aguardar o usuário parar de digitar
 
         self._criar_widgets()
         self._carregar_produtos()
@@ -35,6 +42,76 @@ class TelaProdutos(tk.Toplevel):
     # INTERFACE
     # =========================
     def _criar_widgets(self):
+        # ========================================
+        # NOVO: Frame de Filtros EXPANDIDO (2 linhas)
+        # ========================================
+        frame_filtros = tk.LabelFrame(self, text="🔍 Filtros de Pesquisa", padx=10, pady=8)
+        frame_filtros.pack(fill="x", padx=10, pady=(5, 0))
+
+        # ===== LINHA 1 de filtros =====
+        tk.Label(frame_filtros, text="Nome:").grid(row=0, column=0, sticky="w", padx=(0, 5))
+        tk.Label(frame_filtros, text="Categoria:").grid(row=0, column=2, sticky="w", padx=(10, 5))
+        tk.Label(frame_filtros, text="Código:").grid(row=0, column=4, sticky="w", padx=(10, 5))
+
+        self.entry_filtro_nome = tk.Entry(frame_filtros, width=25)
+        self.entry_filtro_categoria = tk.Entry(frame_filtros, width=18)
+        self.entry_filtro_codigo = tk.Entry(frame_filtros, width=18)
+
+        self.entry_filtro_nome.grid(row=0, column=1, padx=5, pady=5)
+        self.entry_filtro_categoria.grid(row=0, column=3, padx=5, pady=5)
+        self.entry_filtro_codigo.grid(row=0, column=5, padx=5, pady=5)
+
+        # ===== LINHA 2 de filtros (NOVOS) =====
+        tk.Label(frame_filtros, text="Tamanho:").grid(row=1, column=0, sticky="w", padx=(0, 5))
+        tk.Label(frame_filtros, text="Cor:").grid(row=1, column=2, sticky="w", padx=(10, 5))
+        tk.Label(frame_filtros, text="Preço Min:").grid(row=1, column=4, sticky="w", padx=(10, 5))
+        tk.Label(frame_filtros, text="Preço Max:").grid(row=1, column=6, sticky="w", padx=(10, 5))
+
+        self.entry_filtro_tamanho = tk.Entry(frame_filtros, width=10)
+        self.entry_filtro_cor = tk.Entry(frame_filtros, width=15)
+        self.entry_filtro_preco_min = tk.Entry(frame_filtros, width=10)
+        self.entry_filtro_preco_max = tk.Entry(frame_filtros, width=10)
+
+        self.entry_filtro_tamanho.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        self.entry_filtro_cor.grid(row=1, column=3, padx=5, pady=5, sticky="w")
+        self.entry_filtro_preco_min.grid(row=1, column=5, padx=5, pady=5, sticky="w")
+        self.entry_filtro_preco_max.grid(row=1, column=7, padx=5, pady=5, sticky="w")
+
+        # ===== LINHA 3: Checkbox de estoque baixo e botões =====
+        self.var_estoque_baixo = tk.BooleanVar(value=False)
+        self.check_estoque_baixo = tk.Checkbutton(
+            frame_filtros,
+            text="Apenas estoque baixo (≤ 10)",
+            variable=self.var_estoque_baixo,
+            command=self._aplicar_filtros_automatico
+        )
+        self.check_estoque_baixo.grid(row=2, column=0, columnspan=3, sticky="w", pady=5)
+
+        # Botão limpar filtros
+        btn_limpar_filtro = tk.Button(
+            frame_filtros, 
+            text="✖ Limpar Filtros", 
+            command=self._limpar_filtros,
+            cursor="hand2"
+        )
+        btn_limpar_filtro.grid(row=2, column=5, columnspan=3, padx=5)
+
+        # NOVO: Configurar busca em tempo real (evento KeyRelease)
+        # Quando o usuário solta uma tecla, aguarda 500ms e então busca
+        for entry in [
+            self.entry_filtro_nome,
+            self.entry_filtro_categoria,
+            self.entry_filtro_codigo,
+            self.entry_filtro_tamanho,
+            self.entry_filtro_cor,
+            self.entry_filtro_preco_min,
+            self.entry_filtro_preco_max
+        ]:
+            entry.bind('<KeyRelease>', self._agendar_busca_tempo_real)
+
+        # ========================================
+        # Frame de Cadastro (mantido igual)
+        # ========================================
         frame_form = tk.Frame(self)
         frame_form.pack(fill="x", padx=10, pady=5)
 
@@ -118,7 +195,7 @@ class TelaProdutos(tk.Toplevel):
         titulos = {
             "id": "ID",
             "status": "Status",
-            "nome": "Produto",
+            "nome": "Produto ▲",  # ← Indicador de ordenação inicial
             "categoria": "Categoria",
             "tamanho": "Tam.",
             "cor": "Cor",
@@ -161,14 +238,19 @@ class TelaProdutos(tk.Toplevel):
             self.tree.heading(col, text=titulos[col])
             self.tree.column(col, width=larguras[col], anchor=alinhamento[col], stretch=False)
 
+        # NOVO: Adicionar clique nas colunas para ordenar
+        # Colunas que podem ser ordenadas
+        colunas_ordenaveis = ["nome", "categoria", "estoque", "preco_venda", "tamanho", "cor", "preco_custo"]
+        for col in colunas_ordenaveis:
+            self.tree.heading(col, text=titulos[col], command=lambda c=col: self._ordenar_por_coluna(c))
+
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._selecionar_produto)
         
-        # ===== NOVO: Frame para controles de paginação =====
+        # Frame para controles de paginação
         frame_paginacao = tk.Frame(self)
         frame_paginacao.pack(fill="x", padx=10, pady=5)
         
-        # Botão para ir para a primeira página
         self.btn_primeira = tk.Button(
             frame_paginacao, 
             text="<<", 
@@ -177,7 +259,6 @@ class TelaProdutos(tk.Toplevel):
         )
         self.btn_primeira.pack(side="left", padx=2)
         
-        # Botão página anterior
         self.btn_anterior = tk.Button(
             frame_paginacao, 
             text="<", 
@@ -186,7 +267,6 @@ class TelaProdutos(tk.Toplevel):
         )
         self.btn_anterior.pack(side="left", padx=2)
         
-        # Label mostrando a página atual
         self.label_pagina = tk.Label(
             frame_paginacao, 
             text="Página 1 de 1",
@@ -194,7 +274,6 @@ class TelaProdutos(tk.Toplevel):
         )
         self.label_pagina.pack(side="left", padx=10)
         
-        # Botão próxima página
         self.btn_proxima = tk.Button(
             frame_paginacao, 
             text=">", 
@@ -203,7 +282,6 @@ class TelaProdutos(tk.Toplevel):
         )
         self.btn_proxima.pack(side="left", padx=2)
         
-        # Botão para ir para a última página
         self.btn_ultima = tk.Button(
             frame_paginacao, 
             text=">>", 
@@ -212,7 +290,6 @@ class TelaProdutos(tk.Toplevel):
         )
         self.btn_ultima.pack(side="left", padx=2)
         
-        # Label mostrando total de produtos
         self.label_total = tk.Label(
             frame_paginacao,
             text="Total: 0 produtos",
@@ -221,6 +298,112 @@ class TelaProdutos(tk.Toplevel):
         self.label_total.pack(side="right", padx=10)
         
         self._atualizar_visibilidade_botoes()
+
+    # =========================
+    # NOVAS FUNÇÕES DE BUSCA EM TEMPO REAL
+    # =========================
+    def _agendar_busca_tempo_real(self, event=None):
+        """
+        Agenda uma busca para daqui a 500ms.
+        Se o usuário continuar digitando, o timer é reiniciado.
+        Isso evita fazer muitas buscas enquanto o usuário digita rapidamente.
+        """
+        # Cancela o timer anterior (se existir)
+        if self.timer_busca:
+            self.after_cancel(self.timer_busca)
+        
+        # Agenda uma nova busca para daqui a 500 milissegundos
+        self.timer_busca = self.after(500, self._aplicar_filtros_automatico)
+
+    def _aplicar_filtros_automatico(self):
+        """
+        Aplica os filtros sem precisar clicar em botão.
+        Volta para página 1 e recarrega.
+        """
+        self.pagina_atual = 1
+        self._carregar_produtos()
+
+    # =========================
+    # NOVA FUNÇÃO DE ORDENAÇÃO
+    # =========================
+    def _ordenar_por_coluna(self, coluna):
+        """
+        Ordena a tabela pela coluna clicada.
+        Se clicar na mesma coluna, inverte a ordem (crescente/decrescente).
+        """
+        # Se clicar na mesma coluna, inverte a ordem
+        if self.coluna_ordenacao == coluna:
+            self.ordem_crescente = not self.ordem_crescente
+        else:
+            # Se mudar de coluna, começa em ordem crescente
+            self.coluna_ordenacao = coluna
+            self.ordem_crescente = True
+        
+        # Atualiza os cabeçalhos para mostrar o indicador de ordenação
+        self._atualizar_indicador_ordenacao()
+        
+        # Recarrega os produtos com a nova ordenação
+        self._carregar_produtos()
+
+    def _atualizar_indicador_ordenacao(self):
+        """
+        Atualiza os cabeçalhos das colunas para mostrar qual está ordenada.
+        ▲ = crescente, ▼ = decrescente
+        """
+        titulos = {
+            "id": "ID",
+            "status": "Status",
+            "nome": "Produto",
+            "categoria": "Categoria",
+            "tamanho": "Tam.",
+            "cor": "Cor",
+            "estoque": "Estoque",
+            "preco_custo": "Preço Custo",
+            "preco_venda": "Preço Venda",
+            "total_custo": "Total Custo",
+            "total_venda": "Total Venda"
+        }
+        
+        # Adiciona o indicador na coluna ordenada
+        for col in titulos:
+            texto = titulos[col]
+            if col == self.coluna_ordenacao:
+                texto += " ▲" if self.ordem_crescente else " ▼"
+            self.tree.heading(col, text=texto)
+
+    # =========================
+    # FUNÇÕES DE FILTRO
+    # =========================
+    def _aplicar_filtros(self):
+        """
+        Aplica os filtros digitados pelo usuário.
+        Volta para a página 1 e recarrega a tabela.
+        """
+        self.pagina_atual = 1
+        self._carregar_produtos()
+
+    def _limpar_filtros(self):
+        """
+        Limpa todos os campos de filtro.
+        Volta para a página 1 e recarrega a tabela completa.
+        """
+        # Limpa os campos de texto
+        self.entry_filtro_nome.delete(0, tk.END)
+        self.entry_filtro_categoria.delete(0, tk.END)
+        self.entry_filtro_codigo.delete(0, tk.END)
+        self.entry_filtro_tamanho.delete(0, tk.END)
+        self.entry_filtro_cor.delete(0, tk.END)
+        self.entry_filtro_preco_min.delete(0, tk.END)
+        self.entry_filtro_preco_max.delete(0, tk.END)
+        
+        # Desmarca o checkbox de estoque baixo
+        self.var_estoque_baixo.set(False)
+        
+        # Volta para a primeira página
+        self.pagina_atual = 1
+        
+        # Recarrega sem filtros
+        self._carregar_produtos()
 
     # =========================
     # AÇÕES
@@ -323,26 +506,63 @@ class TelaProdutos(tk.Toplevel):
     # ===== MODIFICADO: Função principal de carregamento =====
     def _carregar_produtos(self):
         """
-        Carrega TODOS os produtos do banco e depois exibe apenas
-        os da página atual.
+        Carrega TODOS os produtos do banco (aplicando filtros se houver)
+        e depois exibe apenas os da página atual.
         """
-        # 1. Busca TODOS os produtos do banco de dados
+        # Pega os valores dos filtros
         mostrar_inativos = self.var_mostrar_inativos.get()
-        self.produtos_carregados = listar_produtos(ativos_apenas=not mostrar_inativos)
+        filtro_nome = self.entry_filtro_nome.get()
+        filtro_categoria = self.entry_filtro_categoria.get()
+        filtro_codigo = self.entry_filtro_codigo.get()
+        filtro_tamanho = self.entry_filtro_tamanho.get()
+        filtro_cor = self.entry_filtro_cor.get()
         
-        # 2. Atualiza o total de produtos
+        # Pega valores de preço (converte para float se houver)
+        preco_min = None
+        preco_max = None
+        
+        try:
+            texto_min = self.entry_filtro_preco_min.get()
+            if texto_min.strip():
+                preco_min = normalizar_numero(texto_min)
+        except:
+            pass  # Ignora erro de conversão
+        
+        try:
+            texto_max = self.entry_filtro_preco_max.get()
+            if texto_max.strip():
+                preco_max = normalizar_numero(texto_max)
+        except:
+            pass  # Ignora erro de conversão
+        
+        # Verifica se o filtro de estoque baixo está marcado
+        estoque_baixo = 10 if self.var_estoque_baixo.get() else None
+        
+        # Busca TODOS os produtos com os filtros e ordenação
+        self.produtos_carregados = listar_produtos(
+            ativos_apenas=not mostrar_inativos,
+            filtro_nome=filtro_nome,
+            filtro_categoria=filtro_categoria,
+            filtro_codigo=filtro_codigo,
+            filtro_tamanho=filtro_tamanho,
+            filtro_cor=filtro_cor,
+            preco_min=preco_min,
+            preco_max=preco_max,
+            estoque_baixo=estoque_baixo,
+            ordenar_por=self.coluna_ordenacao,
+            ordem_crescente=self.ordem_crescente
+        )
+        
+        # Atualiza o total de produtos
         self.total_produtos = len(self.produtos_carregados)
         
-        # 3. Volta para a página 1 quando recarregar
-        self.pagina_atual = 1
-        
-        # 4. Atualiza a exibição da tabela com a página atual
+        # Atualiza a exibição da tabela com a página atual
         self._atualizar_tabela()
         
-        # 5. Atualiza os controles de paginação
+        # Atualiza os controles de paginação
         self._atualizar_controles_paginacao()
 
-    # ===== NOVA FUNÇÃO: Atualiza apenas a tabela =====
+    # ===== Atualiza apenas a tabela =====
     def _atualizar_tabela(self):
         """
         Atualiza a tabela mostrando apenas os produtos da página atual.
@@ -352,9 +572,6 @@ class TelaProdutos(tk.Toplevel):
             self.tree.delete(item)
         
         # Calcula quais produtos mostrar
-        # Por exemplo: Se estamos na página 2 e mostramos 20 por página:
-        # inicio = (2-1) * 20 = 20 (começa no produto 20)
-        # fim = 2 * 20 = 40 (termina no produto 40)
         inicio = (self.pagina_atual - 1) * self.itens_por_pagina
         fim = inicio + self.itens_por_pagina
         
@@ -384,13 +601,11 @@ class TelaProdutos(tk.Toplevel):
 
         self.tree.tag_configure("inativo", background="#ffcccc")
 
-    # ===== NOVA FUNÇÃO: Atualiza os controles de paginação =====
+    # ===== Atualiza os controles de paginação =====
     def _atualizar_controles_paginacao(self):
         """
         Atualiza os botões e labels da paginação.
         """
-        # Calcula o número total de páginas
-        # Por exemplo: 45 produtos / 20 por página = 2.25 → 3 páginas
         import math
         total_paginas = math.ceil(self.total_produtos / self.itens_por_pagina) if self.total_produtos > 0 else 1
         
@@ -398,8 +613,7 @@ class TelaProdutos(tk.Toplevel):
         self.label_pagina.config(text=f"Página {self.pagina_atual} de {total_paginas}")
         self.label_total.config(text=f"Total: {self.total_produtos} produtos")
         
-        # Habilita/desabilita botões conforme necessário
-        # Desabilita botão "anterior" se estiver na primeira página
+        # Habilita/desabilita botões
         if self.pagina_atual <= 1:
             self.btn_anterior.config(state="disabled")
             self.btn_primeira.config(state="disabled")
@@ -407,7 +621,6 @@ class TelaProdutos(tk.Toplevel):
             self.btn_anterior.config(state="normal")
             self.btn_primeira.config(state="normal")
         
-        # Desabilita botão "próxima" se estiver na última página
         if self.pagina_atual >= total_paginas:
             self.btn_proxima.config(state="disabled")
             self.btn_ultima.config(state="disabled")
@@ -415,11 +628,9 @@ class TelaProdutos(tk.Toplevel):
             self.btn_proxima.config(state="normal")
             self.btn_ultima.config(state="normal")
 
-    # ===== NOVAS FUNÇÕES: Navegação entre páginas =====
+    # ===== Navegação entre páginas =====
     def _proxima_pagina(self):
-        """
-        Vai para a próxima página.
-        """
+        """Vai para a próxima página."""
         import math
         total_paginas = math.ceil(self.total_produtos / self.itens_por_pagina)
         
@@ -429,26 +640,20 @@ class TelaProdutos(tk.Toplevel):
             self._atualizar_controles_paginacao()
 
     def _pagina_anterior(self):
-        """
-        Volta para a página anterior.
-        """
+        """Volta para a página anterior."""
         if self.pagina_atual > 1:
             self.pagina_atual -= 1
             self._atualizar_tabela()
             self._atualizar_controles_paginacao()
 
     def _ir_primeira_pagina(self):
-        """
-        Vai para a primeira página.
-        """
+        """Vai para a primeira página."""
         self.pagina_atual = 1
         self._atualizar_tabela()
         self._atualizar_controles_paginacao()
 
     def _ir_ultima_pagina(self):
-        """
-        Vai para a última página.
-        """
+        """Vai para a última página."""
         import math
         total_paginas = math.ceil(self.total_produtos / self.itens_por_pagina)
         self.pagina_atual = total_paginas
