@@ -1,4 +1,4 @@
-VERSAO_APP = "1.1.2"
+VERSAO_APP = "1.2.0"
 
 """
 bugfix → 1.0.1

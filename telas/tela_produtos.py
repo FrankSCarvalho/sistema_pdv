@@ -17,10 +17,16 @@ class TelaProdutos(tk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Cadastro de Produtos")
-        self.geometry("1000x550")  
+        self.geometry("1000x600")  # Aumentei a altura para caber os controles de paginação
 
         self.produto_selecionado_id = None
-        self.produto_selecionado_ativo = True  
+        self.produto_selecionado_ativo = True
+        
+        # ===== NOVO: Variáveis para controlar a paginação =====
+        self.pagina_atual = 1  # Começamos na página 1
+        self.itens_por_pagina = 16  # Quantos produtos mostrar por página
+        self.total_produtos = 0  # Quantos produtos existem no total
+        self.produtos_carregados = []  # Lista temporária com TODOS os produtos
 
         self._criar_widgets()
         self._carregar_produtos()
@@ -72,25 +78,23 @@ class TelaProdutos(tk.Toplevel):
         
         tk.Button(frame_botoes, text="Limpar", command=self._limpar).pack(side="left", padx=5)
         
-        # ← NOVO: Botão Desativar
         self.btn_desativar = tk.Button(
             frame_botoes, 
             text="Desativar", 
             command=self._desativar,
-            bg="#ffcccc"  # Cor de fundo levemente vermelha
+            bg="#ffcccc"
         )
         self.btn_desativar.pack(side="left", padx=5)
         
-        # ← NOVO: Botão Reativar
         self.btn_reativar = tk.Button(
             frame_botoes, 
             text="Reativar", 
             command=self._reativar,
-            bg="#ccffcc"  # Cor de fundo levemente verde
+            bg="#ccffcc"
         )
         self.btn_reativar.pack(side="left", padx=5)
 
-        # ← NOVO: Checkbox para mostrar inativos
+        # Checkbox para mostrar inativos
         frame_filtro = tk.Frame(self)
         frame_filtro.pack(fill="x", padx=10, pady=5)
         
@@ -99,7 +103,7 @@ class TelaProdutos(tk.Toplevel):
             frame_filtro,
             text="Mostrar produtos inativos",
             variable=self.var_mostrar_inativos,
-            command=self._carregar_produtos  # Recarrega a lista quando marca/desmarca
+            command=self._carregar_produtos
         )
         self.check_mostrar_inativos.pack(side="left")
 
@@ -107,14 +111,13 @@ class TelaProdutos(tk.Toplevel):
         frame_lista = tk.Frame(self)
         frame_lista.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # ← NOVA COLUNA: status
         colunas = ("id", "status", "nome", "categoria", "tamanho", "cor", "estoque", "preco_custo", "preco_venda", "total_custo", "total_venda")
 
         self.tree = ttk.Treeview(frame_lista, columns=colunas, show="headings")
 
         titulos = {
             "id": "ID",
-            "status": "Status",  # ← NOVO
+            "status": "Status",
             "nome": "Produto",
             "categoria": "Categoria",
             "tamanho": "Tam.",
@@ -128,8 +131,8 @@ class TelaProdutos(tk.Toplevel):
 
         larguras = {
             "id": 30,
-            "status": 70,  # ← NOVO
-            "nome": 180,  # Reduzi um pouco para caber a nova coluna
+            "status": 70,
+            "nome": 180,
             "categoria": 110,
             "tamanho": 60,
             "cor": 60,
@@ -142,7 +145,7 @@ class TelaProdutos(tk.Toplevel):
 
         alinhamento = {
             "id": "center",
-            "status": "center",  # ← NOVO
+            "status": "center",
             "nome": "w",
             "categoria": "w",
             "tamanho": "center",
@@ -161,7 +164,62 @@ class TelaProdutos(tk.Toplevel):
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self._selecionar_produto)
         
-        # ← NOVO: Inicialmente esconde os botões de desativar/reativar
+        # ===== NOVO: Frame para controles de paginação =====
+        frame_paginacao = tk.Frame(self)
+        frame_paginacao.pack(fill="x", padx=10, pady=5)
+        
+        # Botão para ir para a primeira página
+        self.btn_primeira = tk.Button(
+            frame_paginacao, 
+            text="<<", 
+            command=self._ir_primeira_pagina,
+            width=3
+        )
+        self.btn_primeira.pack(side="left", padx=2)
+        
+        # Botão página anterior
+        self.btn_anterior = tk.Button(
+            frame_paginacao, 
+            text="<", 
+            command=self._pagina_anterior,
+            width=3
+        )
+        self.btn_anterior.pack(side="left", padx=2)
+        
+        # Label mostrando a página atual
+        self.label_pagina = tk.Label(
+            frame_paginacao, 
+            text="Página 1 de 1",
+            font=("Arial", 10)
+        )
+        self.label_pagina.pack(side="left", padx=10)
+        
+        # Botão próxima página
+        self.btn_proxima = tk.Button(
+            frame_paginacao, 
+            text=">", 
+            command=self._proxima_pagina,
+            width=3
+        )
+        self.btn_proxima.pack(side="left", padx=2)
+        
+        # Botão para ir para a última página
+        self.btn_ultima = tk.Button(
+            frame_paginacao, 
+            text=">>", 
+            command=self._ir_ultima_pagina,
+            width=3
+        )
+        self.btn_ultima.pack(side="left", padx=2)
+        
+        # Label mostrando total de produtos
+        self.label_total = tk.Label(
+            frame_paginacao,
+            text="Total: 0 produtos",
+            font=("Arial", 9)
+        )
+        self.label_total.pack(side="right", padx=10)
+        
         self._atualizar_visibilidade_botoes()
 
     # =========================
@@ -232,11 +290,7 @@ class TelaProdutos(tk.Toplevel):
             self._limpar()
             messagebox.showinfo("Sucesso", "Produto desativado!", parent=self)
 
-    # ← NOVA FUNÇÃO: Reativar produto
     def _reativar(self):
-        """
-        Reativa um produto que estava desativado.
-        """
         if not self.produto_selecionado_id:
             messagebox.showwarning("Atenção", "Selecione um produto.", parent=self)
             return
@@ -249,10 +303,10 @@ class TelaProdutos(tk.Toplevel):
 
     def _limpar(self):
         self.produto_selecionado_id = None
-        self.produto_selecionado_ativo = True  # ← NOVO: Reseta o status
+        self.produto_selecionado_ativo = True
 
         self.btn_salvar.config(state="normal")
-        self._atualizar_visibilidade_botoes()  # ← NOVO: Atualiza botões
+        self._atualizar_visibilidade_botoes()
 
         for entry in [
             self.entry_codigo,
@@ -266,29 +320,57 @@ class TelaProdutos(tk.Toplevel):
         ]:
             entry.delete(0, tk.END)
 
+    # ===== MODIFICADO: Função principal de carregamento =====
     def _carregar_produtos(self):
         """
-        Carrega produtos na tabela.
-        Mostra ativos e inativos dependendo do checkbox.
+        Carrega TODOS os produtos do banco e depois exibe apenas
+        os da página atual.
+        """
+        # 1. Busca TODOS os produtos do banco de dados
+        mostrar_inativos = self.var_mostrar_inativos.get()
+        self.produtos_carregados = listar_produtos(ativos_apenas=not mostrar_inativos)
+        
+        # 2. Atualiza o total de produtos
+        self.total_produtos = len(self.produtos_carregados)
+        
+        # 3. Volta para a página 1 quando recarregar
+        self.pagina_atual = 1
+        
+        # 4. Atualiza a exibição da tabela com a página atual
+        self._atualizar_tabela()
+        
+        # 5. Atualiza os controles de paginação
+        self._atualizar_controles_paginacao()
+
+    # ===== NOVA FUNÇÃO: Atualiza apenas a tabela =====
+    def _atualizar_tabela(self):
+        """
+        Atualiza a tabela mostrando apenas os produtos da página atual.
         """
         # Limpa a tabela
         for item in self.tree.get_children():
             self.tree.delete(item)
-
-        # ← MODIFICADO: Agora usa o valor do checkbox
-        mostrar_inativos = self.var_mostrar_inativos.get()
-        produtos = listar_produtos(ativos_apenas=not mostrar_inativos)
-
-        for produto in produtos:
+        
+        # Calcula quais produtos mostrar
+        # Por exemplo: Se estamos na página 2 e mostramos 20 por página:
+        # inicio = (2-1) * 20 = 20 (começa no produto 20)
+        # fim = 2 * 20 = 40 (termina no produto 40)
+        inicio = (self.pagina_atual - 1) * self.itens_por_pagina
+        fim = inicio + self.itens_por_pagina
+        
+        # Pega apenas os produtos desta página
+        produtos_pagina = self.produtos_carregados[inicio:fim]
+        
+        # Adiciona os produtos na tabela
+        for produto in produtos_pagina:
             total_custo = produto.estoque * (produto.preco_custo or 0)
             total_venda = produto.estoque * (produto.preco_venda or 0)
             
-            # ← NOVO: Define o status visual
             status = "ATIVO" if produto.ativo == 1 else "INATIVO"
 
             self.tree.insert("", tk.END, values=(
                 produto.id,
-                status,  # ← NOVA COLUNA
+                status,
                 produto.nome,
                 produto.categoria,
                 produto.tamanho,
@@ -298,10 +380,80 @@ class TelaProdutos(tk.Toplevel):
                 formatar_moeda(produto.preco_venda),
                 formatar_moeda(total_custo),
                 formatar_moeda(total_venda)
-            ), tags=("inativo",) if produto.ativo == 0 else ())  # ← Tag para estilizar
+            ), tags=("inativo",) if produto.ativo == 0 else ())
 
-        # ← NOVO: Estiliza produtos inativos com cor diferente
-        self.tree.tag_configure("inativo", background="#ffcccc")  # Fundo vermelho claro
+        self.tree.tag_configure("inativo", background="#ffcccc")
+
+    # ===== NOVA FUNÇÃO: Atualiza os controles de paginação =====
+    def _atualizar_controles_paginacao(self):
+        """
+        Atualiza os botões e labels da paginação.
+        """
+        # Calcula o número total de páginas
+        # Por exemplo: 45 produtos / 20 por página = 2.25 → 3 páginas
+        import math
+        total_paginas = math.ceil(self.total_produtos / self.itens_por_pagina) if self.total_produtos > 0 else 1
+        
+        # Atualiza o texto da página
+        self.label_pagina.config(text=f"Página {self.pagina_atual} de {total_paginas}")
+        self.label_total.config(text=f"Total: {self.total_produtos} produtos")
+        
+        # Habilita/desabilita botões conforme necessário
+        # Desabilita botão "anterior" se estiver na primeira página
+        if self.pagina_atual <= 1:
+            self.btn_anterior.config(state="disabled")
+            self.btn_primeira.config(state="disabled")
+        else:
+            self.btn_anterior.config(state="normal")
+            self.btn_primeira.config(state="normal")
+        
+        # Desabilita botão "próxima" se estiver na última página
+        if self.pagina_atual >= total_paginas:
+            self.btn_proxima.config(state="disabled")
+            self.btn_ultima.config(state="disabled")
+        else:
+            self.btn_proxima.config(state="normal")
+            self.btn_ultima.config(state="normal")
+
+    # ===== NOVAS FUNÇÕES: Navegação entre páginas =====
+    def _proxima_pagina(self):
+        """
+        Vai para a próxima página.
+        """
+        import math
+        total_paginas = math.ceil(self.total_produtos / self.itens_por_pagina)
+        
+        if self.pagina_atual < total_paginas:
+            self.pagina_atual += 1
+            self._atualizar_tabela()
+            self._atualizar_controles_paginacao()
+
+    def _pagina_anterior(self):
+        """
+        Volta para a página anterior.
+        """
+        if self.pagina_atual > 1:
+            self.pagina_atual -= 1
+            self._atualizar_tabela()
+            self._atualizar_controles_paginacao()
+
+    def _ir_primeira_pagina(self):
+        """
+        Vai para a primeira página.
+        """
+        self.pagina_atual = 1
+        self._atualizar_tabela()
+        self._atualizar_controles_paginacao()
+
+    def _ir_ultima_pagina(self):
+        """
+        Vai para a última página.
+        """
+        import math
+        total_paginas = math.ceil(self.total_produtos / self.itens_por_pagina)
+        self.pagina_atual = total_paginas
+        self._atualizar_tabela()
+        self._atualizar_controles_paginacao()
 
     def _selecionar_produto(self, event):
         item = self.tree.selection()
@@ -316,10 +468,10 @@ class TelaProdutos(tk.Toplevel):
             return
 
         self.produto_selecionado_id = produto.id
-        self.produto_selecionado_ativo = (produto.ativo == 1)  # ← NOVO: Salva o status
+        self.produto_selecionado_ativo = (produto.ativo == 1)
 
         self.btn_salvar.config(state="disabled")
-        self._atualizar_visibilidade_botoes()  # ← NOVO: Atualiza botões
+        self._atualizar_visibilidade_botoes()
 
         self.entry_codigo.delete(0, tk.END)
         if produto.codigo_barras:
@@ -346,21 +498,13 @@ class TelaProdutos(tk.Toplevel):
         self.entry_estoque.delete(0, tk.END)
         self.entry_estoque.insert(0, produto.estoque)
 
-    # ← NOVA FUNÇÃO: Controla visibilidade dos botões
     def _atualizar_visibilidade_botoes(self):
-        """
-        Mostra ou esconde botões Desativar/Reativar dependendo 
-        do produto selecionado estar ativo ou não.
-        """
         if self.produto_selecionado_id is None:
-            # Nenhum produto selecionado - esconde ambos
             self.btn_desativar.pack_forget()
             self.btn_reativar.pack_forget()
         elif self.produto_selecionado_ativo:
-            # Produto ATIVO - mostra apenas Desativar
             self.btn_desativar.pack(side="left", padx=5)
             self.btn_reativar.pack_forget()
         else:
-            # Produto INATIVO - mostra apenas Reativar
             self.btn_desativar.pack_forget()
             self.btn_reativar.pack(side="left", padx=5)
