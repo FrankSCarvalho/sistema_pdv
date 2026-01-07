@@ -3,6 +3,7 @@ from tkinter import ttk
 
 from telas.tela_produtos import TelaProdutos
 from telas.tela_movimentacao import TelaMovimentacao
+from telas.tela_vendas import TelaVendas
 
 from utils.atualizador import verificar_atualizacao
 
@@ -11,7 +12,7 @@ class TelaPrincipal(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Sistema de Controle de Estoque - Loja de Roupas")
-        self.geometry("400x250")
+        self.geometry("400x300")
         self.resizable(False, False)
 
         self._criar_widgets()
@@ -31,24 +32,34 @@ class TelaPrincipal(tk.Tk):
 
         ttk.Button(
             frame,
-            text="Cadastro de Produtos",
+            text="🛒 Vendas (PDV)",
+            width=30,
+            command=self._abrir_vendas
+        ).pack(pady=5)
+
+        ttk.Button(
+            frame,
+            text="📦 Cadastro de Produtos",
             width=30,
             command=self._abrir_produtos
         ).pack(pady=5)
 
         ttk.Button(
             frame,
-            text="Movimentação de Estoque",
+            text="📊 Movimentação de Estoque",
             width=30,
             command=self._abrir_movimentacao
         ).pack(pady=5)
 
         ttk.Button(
             frame,
-            text="Sair",
+            text="❌ Sair",
             width=30,
             command=self.destroy
         ).pack(pady=15)
+
+    def _abrir_vendas(self):
+        TelaVendas(self)
 
     def _abrir_produtos(self):
         TelaProdutos(self)
