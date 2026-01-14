@@ -5,6 +5,7 @@ from telas.tela_produtos import TelaProdutos
 from telas.tela_movimentacao import TelaMovimentacao
 from telas.tela_vendas import TelaVendas
 from telas.tela_usuarios import TelaUsuarios
+from telas.tela_dashboard import TelaDashboard
 
 from utils.atualizador import verificar_atualizacao
 
@@ -60,6 +61,15 @@ class TelaPrincipal(tk.Tk):
         titulo.pack(pady=10)
 
         # Botões de navegação (com controle de acesso)
+
+        # Dashboard - Todos podem ver
+        ttk.Button(
+                frame,
+                text="📊 Dashboard de Vendas",
+                width=30,
+                command=self._abrir_dashboard
+            ).pack(pady=5)
+
         
         # PDV - Todos podem acessar
         if self.usuario_logado.pode_acessar_vendas():
@@ -128,3 +138,6 @@ class TelaPrincipal(tk.Tk):
     def _sair(self):
         if messagebox.askyesno("Confirmar", "Deseja realmente sair do sistema?", parent=self):
             self.destroy()
+
+    def _abrir_dashboard(self):
+        TelaDashboard(self, usuario_logado=self.usuario_logado)

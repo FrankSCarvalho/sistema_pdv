@@ -343,3 +343,250 @@ def obter_total_vendas_periodo(data_inicial, data_final):
     conexao.close()
     
     return resultado["total_vendas"]
+
+
+def obter_vendas_hoje():
+    """
+    Retorna o total de vendas realizadas hoje.
+    
+    Returns:
+        float: Valor total vendido hoje
+    """
+    from datetime import date
+    
+    hoje = date.today().strftime("%Y-%m-%d")
+    return obter_total_vendas_periodo(hoje, hoje)
+
+
+def obter_vendas_mes_atual():
+    """
+    Retorna o total de vendas do mês atual.
+    
+    Returns:
+        float: Valor total vendido no mês
+    """
+    from datetime import date
+    
+    hoje = date.today()
+    primeiro_dia = hoje.replace(day=1).strftime("%Y-%m-%d")
+    ultimo_dia = hoje.strftime("%Y-%m-%d")
+    
+    return obter_total_vendas_periodo(primeiro_dia, ultimo_dia)
+
+
+def obter_vendas_por_forma_pagamento():
+    """
+    Retorna o total vendido agrupado por forma de pagamento.
+    
+    Returns:
+        List[dict]: Lista com forma_pagamento e total
+    """
+    from banco.conexao import conectar
+    
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    cursor.execute("""
+        SELECT 
+            forma_pagamento,
+            COUNT(*) as quantidade,
+            SUM(total) as total
+        FROM vendas
+        WHERE cancelada = 0
+        GROUP BY forma_pagamento
+        ORDER BY total DESC
+    """)
+    
+    resultados = cursor.fetchall()
+    conexao.close()
+    
+    vendas = []
+    for row in resultados:
+        vendas.append({
+            "forma_pagamento": row["forma_pagamento"],
+            "quantidade": row["quantidade"],
+            "total": row["total"]
+        })
+    
+    return vendas
+
+
+def obter_produtos_mais_vendidos(limite=5):
+    """
+    Retorna os produtos mais vendidos.
+    
+    Args:
+        limite: Número máximo de produtos a retornar
+        
+    Returns:
+        List[dict]: Lista com nome do produto e quantidade vendida
+    """
+    from banco.conexao import conectar
+    
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    cursor.execute("""
+        SELECT 
+            p.nome,
+            p.tamanho,
+            p.cor,
+            SUM(iv.quantidade) as total_vendido,
+            SUM(iv.subtotal) as valor_total
+        FROM itens_venda iv
+        JOIN produtos p ON p.id = iv.produto_id
+        JOIN vendas v ON v.id = iv.venda_id
+        WHERE v.cancelada = 0
+        GROUP BY iv.produto_id
+        ORDER BY total_vendido DESC
+        LIMIT ?
+    """, (limite,))
+    
+    resultados = cursor.fetchall()
+    conexao.close()
+    
+    produtos = []
+    for row in resultados:
+        nome_completo = f"{row['nome']}"
+        if row['tamanho']:
+            nome_completo += f" ({row['tamanho']}"
+            if row['cor']:
+                nome_completo += f" {row['cor']}"
+            nome_completo += ")"
+        elif row['cor']:
+            nome_completo += f" ({row['cor']})"
+        
+        produtos.append({
+            "nome": nome_completo,
+            "quantidade": row["total_vendido"],
+            "valor_total": row["valor_total"]
+        })
+    
+    return produtos
+
+
+def obter_vendas_ultimos_dias(dias=7):
+    """
+    Retorna o total de vendas dos últimos N dias.
+    
+    Args:
+        dias: Número de dias a buscar
+        
+    Returns:
+        List[dict]: Lista com data e total vendido
+    """
+    from banco.conexao import conectar
+    from datetime import date, timedelta
+    
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    # Calcula as datas
+    hoje = date.today()
+    data_inicial = (hoje - timedelta(days=dias-1)).strftime("%Y-%m-%d")
+    data_final = hoje.strftime("%Y-%m-%d")
+    
+    cursor.execute("""
+        SELECT 
+            DATE(data) as data,
+            COUNT(*) as quantidade,
+            SUM(total) as total
+        FROM vendas
+        WHERE cancelada = 0
+        AND DATE(data) BETWEEN ? AND ?
+        GROUP BY DATE(data)
+        ORDER BY data ASC
+    """, (data_inicial, data_final))
+    
+    resultados = cursor.fetchall()
+    conexao.close()
+    
+    # Cria dicionário com todas as datas (incluindo dias sem vendas)
+    vendas_por_dia = {}
+    data_atual = hoje - timedelta(days=dias-1)
+    while data_atual <= hoje:
+        vendas_por_dia[data_atual.strftime("%Y-%m-%d")] = 0.0
+        data_atual += timedelta(days=1)
+    
+    # Preenche com os dados reais
+    for row in resultados:
+        vendas_por_dia[row["data"]] = row["total"]
+    
+    # Converte para lista
+    vendas = []
+    for data_str, total in sorted(vendas_por_dia.items()):
+        # Formata data para exibição (DD/MM)
+        data_obj = date.fromisoformat(data_str)
+        data_formatada = data_obj.strftime("%d/%m")
+        
+        vendas.append({
+            "data": data_formatada,
+            "total": total
+        })
+    
+    return vendas
+
+
+def obter_estatisticas_gerais():
+    """
+    Retorna estatísticas gerais do sistema.
+    
+    Returns:
+        dict: Dicionário com várias estatísticas
+    """
+    from banco.conexao import conectar
+    from dao.clientes_dao import obter_total_clientes_ativos
+    from dao.produtos_dao import listar_produtos
+    
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    # Total de vendas (todas)
+    cursor.execute("""
+        SELECT COUNT(*) as total
+        FROM vendas
+        WHERE cancelada = 0
+    """)
+    total_vendas = cursor.fetchone()["total"]
+    
+    # Total de produtos vendidos (quantidade)
+    cursor.execute("""
+        SELECT SUM(iv.quantidade) as total
+        FROM itens_venda iv
+        JOIN vendas v ON v.id = iv.venda_id
+        WHERE v.cancelada = 0
+    """)
+    total_produtos_vendidos = cursor.fetchone()["total"] or 0
+    
+    # Ticket médio
+    cursor.execute("""
+        SELECT AVG(total) as media
+        FROM vendas
+        WHERE cancelada = 0
+        AND total > 0
+    """)
+    ticket_medio = cursor.fetchone()["media"] or 0.0
+    
+    conexao.close()
+    
+    # Total de clientes ativos
+    total_clientes = obter_total_clientes_ativos()
+    
+    # Total de produtos cadastrados
+    produtos = listar_produtos(ativos_apenas=True)
+    total_produtos = len(produtos)
+    
+    # Total em estoque (valor)
+    valor_estoque = sum(
+        (p.preco_venda or 0) * p.estoque 
+        for p in produtos
+    )
+    
+    return {
+        "total_vendas": total_vendas,
+        "total_clientes": total_clientes,
+        "total_produtos": total_produtos,
+        "total_produtos_vendidos": total_produtos_vendidos,
+        "ticket_medio": ticket_medio,
+        "valor_estoque": valor_estoque
+    }
