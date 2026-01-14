@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from dao.usuarios_dao import autenticar_usuario, criar_usuario_admin_padrao
+from dao.usuario_dao import autenticar_usuario, criar_usuario_admin_padrao
 
 
 class TelaLogin(tk.Tk):
@@ -198,6 +198,7 @@ class TelaLogin(tk.Tk):
                 self.entry_senha.delete(0, tk.END)
                 self.entry_login.focus()
                 self.entry_login.select_range(0, tk.END)
+                self.btn_entrar.config(state="normal", text="ENTRAR")
         
         except Exception as e:
             messagebox.showerror(
@@ -208,7 +209,8 @@ class TelaLogin(tk.Tk):
         
         finally:
             # Reabilita botão
-            self.btn_entrar.config(state="normal", text="ENTRAR")
+            #self.btn_entrar.config(state="normal", text="ENTRAR")
+            pass
     
     def get_usuario_autenticado(self):
         """

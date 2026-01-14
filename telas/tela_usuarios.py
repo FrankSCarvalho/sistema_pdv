@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from modelos.usuario import Usuario
-from dao.usuarios_dao import (
+from dao.usuario_dao import (
     inserir_usuario,
     atualizar_usuario,
     listar_usuarios,

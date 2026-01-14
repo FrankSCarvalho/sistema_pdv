@@ -22,7 +22,7 @@ class TelaVendas(tk.Toplevel):
     - Finalizar venda
     """
     
-    def __init__(self, master=None):
+    def __init__(self, master=None, usuario_logado=None):
         super().__init__(master)
         self.title("🛒 Sistema de Vendas - PDV")
         self.geometry("1100x700")

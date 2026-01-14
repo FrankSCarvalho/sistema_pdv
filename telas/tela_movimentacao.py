@@ -10,7 +10,7 @@ from dao.estoque_dao import (
 
 
 class TelaMovimentacao(tk.Toplevel):
-    def __init__(self, master=None):
+    def __init__(self, master=None, usuario_logado=None):
         super().__init__(master)
         self.title("Movimentação de Estoque")
         self.geometry("900x500")

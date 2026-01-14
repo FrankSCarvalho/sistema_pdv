@@ -14,7 +14,7 @@ from utils.validadores import normalizar_numero, formatar_moeda
 
 
 class TelaProdutos(tk.Toplevel):
-    def __init__(self, master=None):
+    def __init__(self, master=None, usuario_logado=None):
         super().__init__(master)
         self.title("Cadastro de Produtos")
         self.geometry("1000x750")  # ← AUMENTEI para 750
