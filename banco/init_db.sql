@@ -1,9 +1,35 @@
 -- ============================================
 -- SISTEMA DE CONTROLE DE ESTOQUE - LOJA DE ROUPAS
--- Versão: 1.6.0
+-- Versão: 2.0.0 (com sistema de login)
 -- ============================================
 
 PRAGMA foreign_keys = ON;
+
+-- =========================
+-- TABELA: usuarios
+-- Sistema de autenticação e controle de acesso
+-- =========================
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,                          -- Nome completo do usuário
+    login TEXT UNIQUE NOT NULL,                  -- Login único (username)
+    senha_hash TEXT NOT NULL,                    -- Hash SHA-256 da senha
+    nivel_acesso INTEGER NOT NULL DEFAULT 3,     -- 1=Admin, 2=Gerente, 3=Vendedor
+    ativo INTEGER NOT NULL DEFAULT 1,            -- 0 = inativo, 1 = ativo
+    data_criacao TEXT NOT NULL,                  -- Data de criação do usuário
+    ultimo_acesso TEXT                           -- Data/hora do último login
+);
+
+-- =========================
+-- ÍNDICES DA TABELA usuarios
+-- =========================
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_login
+ON usuarios(login);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_nivel_acesso
+ON usuarios(nivel_acesso);
 
 -- =========================
 -- TABELA: clientes
@@ -76,7 +102,9 @@ CREATE TABLE IF NOT EXISTS movimentacoes_estoque(
     quantidade INTEGER NOT NULL CHECK (quantidade > 0),
     data TEXT NOT NULL,
     observacao TEXT,
-    FOREIGN KEY (produto_id) REFERENCES produtos(id)
+    usuario_id INTEGER,                          -- Usuário que fez a movimentação
+    FOREIGN KEY (produto_id) REFERENCES produtos(id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
 
 -- =========================
@@ -88,6 +116,9 @@ ON movimentacoes_estoque(produto_id);
 
 CREATE INDEX IF NOT EXISTS idx_mov_estoque_data
 ON movimentacoes_estoque(data);
+
+CREATE INDEX IF NOT EXISTS idx_mov_estoque_usuario
+ON movimentacoes_estoque(usuario_id);
 
 -- =========================
 -- TABELA: vendas
@@ -102,9 +133,10 @@ CREATE TABLE IF NOT EXISTS vendas (
     forma_pagamento TEXT NOT NULL,               -- Ex: DINHEIRO, PIX, CARTAO_DEBITO, CARTAO_CREDITO
     observacao TEXT,                             -- Observações opcionais
     cliente_id INTEGER DEFAULT NULL,             -- Cliente que fez a compra (opcional)
-    usuario_id INTEGER DEFAULT NULL,             -- Vendedor (NULL por enquanto, depois usaremos)
+    usuario_id INTEGER DEFAULT NULL,             -- Vendedor que realizou a venda
     cancelada INTEGER NOT NULL DEFAULT 0,        -- 0 = ativa, 1 = cancelada
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
 
 -- =========================
@@ -132,6 +164,9 @@ ON vendas(data);
 
 CREATE INDEX IF NOT EXISTS idx_vendas_cliente_id
 ON vendas(cliente_id);
+
+CREATE INDEX IF NOT EXISTS idx_vendas_usuario_id
+ON vendas(usuario_id);
 
 CREATE INDEX IF NOT EXISTS idx_itens_venda_venda_id
 ON itens_venda(venda_id);
