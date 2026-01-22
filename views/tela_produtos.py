@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from modelos.produto import Produto
+from models import Produto
 from dao.produtos_dao import (
     inserir_produto,
     atualizar_produto,

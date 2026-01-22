@@ -1,5 +1,5 @@
-from banco.conexao import conectar
-from modelos.venda import Venda, ItemVenda
+from database.conexao import conectar
+from models.venda import Venda, ItemVenda
 from datetime import datetime
 
 
@@ -381,7 +381,7 @@ def obter_vendas_por_forma_pagamento():
     Returns:
         List[dict]: Lista com forma_pagamento e total
     """
-    from banco.conexao import conectar
+    from database.conexao import conectar
     
     conexao = conectar()
     cursor = conexao.cursor()
@@ -421,7 +421,7 @@ def obter_produtos_mais_vendidos(limite=5):
     Returns:
         List[dict]: Lista com nome do produto e quantidade vendida
     """
-    from banco.conexao import conectar
+    from database.conexao import conectar
     
     conexao = conectar()
     cursor = conexao.cursor()
@@ -475,7 +475,7 @@ def obter_vendas_ultimos_dias(dias=7):
     Returns:
         List[dict]: Lista com data e total vendido
     """
-    from banco.conexao import conectar
+    from database.conexao import conectar
     from datetime import date, timedelta
     
     conexao = conectar()
@@ -534,7 +534,7 @@ def obter_estatisticas_gerais():
     Returns:
         dict: Dicionário com várias estatísticas
     """
-    from banco.conexao import conectar
+    from database.conexao import conectar
     from dao.clientes_dao import obter_total_clientes_ativos
     from dao.produtos_dao import listar_produtos
     

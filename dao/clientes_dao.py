@@ -1,5 +1,5 @@
-from banco.conexao import conectar
-from modelos.cliente import Cliente
+from database.conexao import conectar
+from models.cliente import Cliente
 from datetime import datetime
 
 

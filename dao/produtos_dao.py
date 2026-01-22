@@ -1,5 +1,5 @@
-from banco.conexao import conectar
-from modelos.produto import Produto
+from database.conexao import conectar
+from models.produto import Produto
 
 def inserir_produto(produto:Produto):
     conexao = conectar()

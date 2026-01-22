@@ -8,7 +8,7 @@ Como usar:
 3. Acompanhe os testes no terminal
 """
 
-from modelos.venda import Venda, ItemVenda
+from models.venda import Venda, ItemVenda
 from dao.vendas_dao import (
     registrar_venda,
     buscar_venda_por_id,
@@ -18,7 +18,7 @@ from dao.vendas_dao import (
 )
 from dao.produtos_dao import listar_produtos
 from dao.clientes_dao import inserir_cliente
-from modelos.cliente import Cliente
+from models.cliente import Cliente
 from datetime import date
 
 

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from modelos.usuario import Usuario
+from models.usuario import Usuario
 from dao.usuario_dao import (
     inserir_usuario,
     atualizar_usuario,
@@ -460,7 +460,7 @@ if __name__ == "__main__":
     root.withdraw()
     
     # Simula um usuário admin logado
-    from modelos.usuario import Usuario
+    from models.usuario import Usuario
     usuario_teste = Usuario(id=1, nome="Admin", nivel_acesso=1)
     
     app = TelaUsuarios(root, usuario_logado=usuario_teste)

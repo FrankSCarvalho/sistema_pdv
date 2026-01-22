@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from modelos.venda import Venda, ItemVenda
-from modelos.cliente import Cliente
+from models.venda import Venda, ItemVenda
+from models.cliente import Cliente
 from dao.vendas_dao import registrar_venda
 from dao.produtos_dao import buscar_produto_por_codigo_barras, listar_produtos
 from dao.clientes_dao import listar_clientes, inserir_cliente

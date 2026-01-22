@@ -7,7 +7,7 @@ Como usar:
 2. Acompanhe os testes no terminal
 """
 
-from modelos.cliente import Cliente
+from models.cliente import Cliente
 from dao.clientes_dao import (
     inserir_cliente,
     atualizar_cliente,

@@ -20,7 +20,7 @@ PASTA_DADOS = pasta_dados_usuario()
 os.makedirs(PASTA_DADOS, exist_ok=True)
 
 CAMINHO_BANCO = os.path.join(PASTA_DADOS, "estoque.db")
-CAMINHO_SCRIPT = os.path.join(BASE_DIR, "banco", "init_db.sql")
+CAMINHO_SCRIPT = os.path.join(BASE_DIR, "database", "init_db.sql")
 
 def conectar():
     """

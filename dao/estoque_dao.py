@@ -1,4 +1,4 @@
-from banco.conexao import conectar
+from database.conexao import conectar
 from dao.produtos_dao import buscar_produto_por_id
 from datetime import datetime
 
